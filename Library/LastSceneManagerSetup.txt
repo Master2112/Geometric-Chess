@@ -1,4 +1,4 @@
 sceneSetups:
-- path: Assets/Scenes/Main Menu.unity
+- path: C:/Development/Projects/StageTwin/Digital-Twin/Assets/Maastunnel.unity
   isLoaded: 1
   isActive: 1

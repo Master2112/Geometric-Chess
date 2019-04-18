@@ -206,6 +206,9 @@ public class GameManager : Singleton<GameManager> {
 			}
 			UpdateBlackTimer();
 		}
+
+        p1.UpdateAI();
+        p2.UpdateAI();
 	}
 
 	//EXPERIMENT_TIMER

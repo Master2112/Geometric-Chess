@@ -1,5 +1,8 @@
-﻿using System.Collections;
+﻿using MachineLearning;
+using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
+using System.Text.RegularExpressions;
 using UnityEngine;
 
 public enum PlayerType {
@@ -8,6 +11,7 @@ public enum PlayerType {
 
 public class GCPlayer : IClicker, IInputReceiver {
 
+    private Grid grid;
 	private PlayerType type;
 
 	private List<Piece> pieces;
@@ -15,6 +19,11 @@ public class GCPlayer : IClicker, IInputReceiver {
 
 	private Piece piece;
 	private Piece checkedBy; //Experimental
+
+    private bool myTurn = false;
+    private bool didTurn = false;
+
+    private StateAgent brain;
 
 	//Experimental
 	public bool IsChecked {
@@ -63,17 +72,155 @@ public class GCPlayer : IClicker, IInputReceiver {
 
 	public void EnableInput() {
 		InputManager.InputEvent += OnInputEvent;
+        myTurn = true;
+        didTurn = false;
 	}
 
 	public void DisableInput() {
 		InputManager.InputEvent -= OnInputEvent;
+        myTurn = false;
 	}
 
 	void OnDisable() {
 		DisableInput();
 	}
 
+    State GetBoardState()
+    {
+        List<StateAction> actions = new List<StateAction>();
+
+        for (int i = 0; i < pieces.Count; i++)
+        {
+            pieces[i].team = (int)type;
+            pieces[i].Compute();
+
+            for (int m = 0; m < pieces[i].PossibleMoves.Count; m++)
+            {
+                string moveString = pieces[i].Node.col + "-" + pieces[i].Node.row + "to" + pieces[i].PossibleMoves[m].col + "-" + pieces[i].PossibleMoves[m].row;
+                actions.Add(new StateAction(moveString, 100000));
+            }
+
+            for (int m = 0; m < pieces[i].PossibleEats.Count; m++)
+            {
+                int fc = pieces[i].Node.col;
+                int fr = pieces[i].Node.row;
+
+                int tc = pieces[i].PossibleEats[m].col;
+                int tr = pieces[i].PossibleEats[m].row;
+
+                string moveString = fc + "-" + fr + "to" + tc + "-" + tr;
+                actions.Add(new StateAction(moveString, 100000));
+            }
+        }
+
+        Piece.AllPieces = Piece.AllPieces.OrderBy(o => o.PieceType).ThenBy(o => o.Node.col).ThenBy(o => o.Node.row).ThenBy(o => o.team).ToList();
+
+        string stateStr = "";
+
+        for (int i = 0; i < Piece.AllPieces.Count; i++)
+        {
+            stateStr += Piece.AllPieces[i].PieceStateString;
+        }
+
+        return new State(stateStr, actions.ToArray());
+    }
+
+    public void UpdateAI()
+    {
+        if (grid == null)
+            grid = GameObject.FindObjectOfType<Grid>();
+
+        if (myTurn && !didTurn)
+        {
+            didTurn = true;
+
+            State boardState = GetBoardState();
+
+            if(brain == null)
+            {
+                brain = new StateAgent(boardState);
+            }
+            else
+            {
+                brain.SetState(boardState);
+            }
+
+            //get action from brain, execute.
+
+            StateAction action = brain.GetChosenActionForCurrentState();
+
+            string[] moves = Regex.Split(action.ActionString, "to");
+            string[] from = Regex.Split(moves[0], "-");
+            string[] to = Regex.Split(moves[1], "-");
+
+            Debug.Log(action.ActionString);
+
+            foreach (Node n in grid.grid)
+            {
+                n.UnhighlightEat();
+                n.UnhighlightMove();
+            }
+
+            Node fromNode = grid.GetNodeAt(int.Parse(from[1]), int.Parse(from[0]));
+            Node toNode = grid.GetNodeAt(int.Parse(to[1]), int.Parse(to[0]));
+
+            fromNode.HighlightMove();
+            toNode.HighlightEat();
+
+            piece = fromNode.Piece;
+            piece.Pickup();
+            GameManager.Instance.GameState.Grab();
+            int reward = 0;
+
+            Piece tPiece = toNode.Piece;
+            if (tPiece == null)
+            {
+                if (piece.IsPossibleMove(toNode))
+                {
+                    if (Rules.IsCheckMove(this, piece, toNode, true))
+                    {
+                        Debug.Log("Move checked, game won"); // do nothing
+                    }
+                    else
+                    {
+                        piece.MoveToXZ(toNode, Drop);
+                        GameManager.Instance.GameState.Place();
+                    }
+                }
+            }
+            else
+            {
+                if (piece.IsPossibleEat(toNode))
+                {
+                    if (Rules.IsCheckEat(this, piece, toNode, true))
+                    {
+                        Debug.Log("Eat checked"); // do nothing
+                    }
+                    else
+                    {
+                        GCPlayer oppPlayer = GameManager.Instance.Opponent(this);
+
+                        oppPlayer.brain.EvaluateLastAction(-tPiece.GetPieceValue());
+                        reward = tPiece.GetPieceValue();
+
+                        oppPlayer.RemovePiece(tPiece);
+                        AddEatenPieces(tPiece);
+                        tPiece.ScaleOut(0.2f, 1.5f);
+                        piece.MoveToXZ(toNode, Drop);
+                        GameManager.Instance.GameState.Place();
+                    }
+                }
+            }
+
+            State newState = GetBoardState();
+
+            brain.PerformStateAction(action, newState);
+            brain.EvaluateLastAction(reward);
+        }
+    }
+
 	public void OnInputEvent(InputActionType action) {
+        return; //Disabled because AI
 		switch (action) {
 			case InputActionType.GRAB_PIECE:
 				Node gNode = Finder.RayHitFromScreen<Node>(Input.mousePosition);
@@ -175,6 +322,7 @@ public class GCPlayer : IClicker, IInputReceiver {
 	}
 
 	public bool RemovePiece(Piece piece) {
+        piece.Unregister();
 		return pieces.Remove(piece);
 	}
 

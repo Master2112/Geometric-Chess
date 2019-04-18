@@ -21,7 +21,7 @@ public class Grid : MonoBehaviour {
 	[SerializeField]
 	private GameObject[] piecesPrefabs;
 
-	private Node[,] grid;
+	public Node[,] grid;
 	private Vector3 tileSize;
 	private Vector3 size;
 

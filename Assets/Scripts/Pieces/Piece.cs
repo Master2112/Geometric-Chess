@@ -24,9 +24,27 @@ public class Piece : Movable, IClickable {
 	
 	private IPieceMovement pieceMovement;
 	private bool dropping;
+    public int team = -1;
+
+    public int GetPieceValue()
+    {
+        switch(pieceType)
+        {
+            case PieceType.CIRCLE: return 10;
+            case PieceType.CROSS: return 10000;
+            case PieceType.SQUARE: return 100;
+            case PieceType.RECTANGLE: return 150;
+            case PieceType.TRIANGLE: return 250;
+            case PieceType.HEXAGON: return 500;
+        }
+
+        return 0;
+    }
 
 	private List<Node> possibleMoves;
 	private List<Node> possibleEats;
+
+    public static List<Piece> AllPieces = new List<Piece>();
 
 	public IPieceMovement PieceMovement {
 		get {return pieceMovement;}
@@ -34,6 +52,14 @@ public class Piece : Movable, IClickable {
 			pieceMovement = value;
 		}
 	}
+
+    public string PieceStateString
+    {
+        get
+        {
+            return this.pieceType.ToString() + this.node.row + "-" + this.node.col + "-" + this.team;
+        }
+    }
 
 	/*
 	private Piece check;
@@ -82,6 +108,7 @@ public class Piece : Movable, IClickable {
 
 	protected override void Start() {
 		base.Start();
+        AllPieces.Add(this);
 	}
 
 	public void HighlightPossibleMoves() {
@@ -192,6 +219,11 @@ public class Piece : Movable, IClickable {
 		//TODO
 		return true;
 	}
+
+    public void Unregister()
+    {
+        AllPieces.Remove(this);
+    }
 
 	public void Highlight() {
 		SetEmission(GameManager.Instance.PieceHighlightColor);

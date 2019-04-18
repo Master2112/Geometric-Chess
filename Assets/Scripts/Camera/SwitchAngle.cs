@@ -83,7 +83,7 @@ public class SwitchAngle : MonoBehaviour {
 	}
 
 	private void SetCameraPosRot(Vector3 pos, Vector3 rot) {
-		rotateCamera.transform.position = pos;
-		rotateCamera.transform.eulerAngles = rot;
+		//rotateCamera.transform.position = pos;
+		//rotateCamera.transform.eulerAngles = rot;
 	}
 }
