@@ -89,7 +89,7 @@ public abstract class Movement : ScriptableObject {
 		BoundComputations();
 	}
 
-	//returns true if met an ally or enemy, this is for square and triangle, to cause a block
+	//returns true if met an ally or enemy, this is for square and triangle, to cause a block.
 	public bool ComputeMoveOrEatPieceEnemyAlly(Node toCheckNode) {
 		if (toCheckNode == null) return false;
 		if (toCheckNode.EmptySpace) {

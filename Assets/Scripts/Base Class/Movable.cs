@@ -6,7 +6,7 @@ using System;
 public class Movable : Scalable {
 
 	[SerializeField]
-	protected float speed = 2f;
+	protected float speed = 8f;
 	protected Coroutine moveCoroutine;
 
 	protected override void Start() {

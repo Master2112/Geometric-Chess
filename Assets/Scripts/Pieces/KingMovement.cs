@@ -65,12 +65,12 @@ public class KingMovement : Movement, IPieceMovement {
 
 				left++;
 			}
-			if (freeLeft && !rooks[0].IsMoved) {
+			/*if (freeLeft && !rooks[0].IsMoved) {
 				specialNodes[0,0] = grid.GetNodeAt(origRow, origCol - 1 * sign); //for rook
 				specialNodes[0,1] = grid.GetNodeAt(origRow, origCol - 2 * sign); //for king
 				ComputeMovePiece(specialNodes[0,1]);
 			}
-
+            */
 			//check right
 			int right = 1;
 			bool freeRight = true;
@@ -97,11 +97,11 @@ public class KingMovement : Movement, IPieceMovement {
 
 				right++;
 			}
-			if (freeRight && !rooks[1].IsMoved) {
+			/*if (freeRight && !rooks[1].IsMoved) {
 				specialNodes[1,0] = grid.GetNodeAt(origRow, origCol + 1 * sign); //for rook
 				specialNodes[1,1] = grid.GetNodeAt(origRow, origCol + 2 * sign); //for king
 				ComputeMovePiece(specialNodes[1,1]);
-			}
+			}*/
 			
 		}
 	}

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 using System.Diagnostics;
+using UnityEngine.SceneManagement;
 
 public class GameManager : Singleton<GameManager> {
 	[SerializeField]
@@ -304,6 +305,8 @@ public class GameManager : Singleton<GameManager> {
 				break;
 		}
 		continueButton.SetActive(true);
+        Piece.AllPieces = new List<Piece>();
+        SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
 	}
 
 	public void End() {

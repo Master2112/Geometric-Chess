@@ -23,7 +23,23 @@ public class GCPlayer : IClicker, IInputReceiver {
     private bool myTurn = false;
     private bool didTurn = false;
 
-    private StateAgent brain;
+    private static StateAgent brain1, brain2;
+
+    public StateAgent brain
+    {
+        get
+        {
+            return type == PlayerType.P1 ? brain1 : brain2;
+        }
+
+        set
+        {
+            if (type == PlayerType.P1)
+                brain1 = value;
+            else
+                brain2 = value;
+        }
+    }
 
 	//Experimental
 	public bool IsChecked {
@@ -96,24 +112,30 @@ public class GCPlayer : IClicker, IInputReceiver {
 
             for (int m = 0; m < pieces[i].PossibleMoves.Count; m++)
             {
-                string moveString = pieces[i].Node.col + "-" + pieces[i].Node.row + "to" + pieces[i].PossibleMoves[m].col + "-" + pieces[i].PossibleMoves[m].row;
-                actions.Add(new StateAction(moveString, 100000));
+                //if (!Rules.IsCheckMove(this, pieces[i], pieces[i].PossibleMoves[m], true) && pieces[i].Node != pieces[i].PossibleMoves[m])
+                {
+                    string moveString = pieces[i].Node.col + "-" + pieces[i].Node.row + "to" + pieces[i].PossibleMoves[m].col + "-" + pieces[i].PossibleMoves[m].row;
+                    actions.Add(new StateAction(moveString, 100000));
+                }
             }
 
             for (int m = 0; m < pieces[i].PossibleEats.Count; m++)
             {
-                int fc = pieces[i].Node.col;
-                int fr = pieces[i].Node.row;
+                //if (!Rules.IsCheckEat(this, pieces[i], pieces[i].PossibleEats[m], true) && pieces[i].Node != pieces[i].PossibleEats[m])
+                {
+                    int fc = pieces[i].Node.col;
+                    int fr = pieces[i].Node.row;
 
-                int tc = pieces[i].PossibleEats[m].col;
-                int tr = pieces[i].PossibleEats[m].row;
+                    int tc = pieces[i].PossibleEats[m].col;
+                    int tr = pieces[i].PossibleEats[m].row;
 
-                string moveString = fc + "-" + fr + "to" + tc + "-" + tr;
-                actions.Add(new StateAction(moveString, 100000));
+                    string moveString = fc + "-" + fr + "to" + tc + "-" + tr;
+                    actions.Add(new StateAction(moveString, 100000));
+                }
             }
         }
 
-        Piece.AllPieces = Piece.AllPieces.OrderBy(o => o.PieceType).ThenBy(o => o.Node.col).ThenBy(o => o.Node.row).ThenBy(o => o.team).ToList();
+        Piece.AllPieces = Piece.AllPieces.OrderBy(o => o.PieceStateString).ToList();
 
         string stateStr = "";
 
@@ -136,7 +158,9 @@ public class GCPlayer : IClicker, IInputReceiver {
 
             State boardState = GetBoardState();
 
-            if(brain == null)
+            Debug.Log("State visited counter: " + boardState.TimesVisited);
+
+            if (brain == null)
             {
                 brain = new StateAgent(boardState);
             }
@@ -153,7 +177,12 @@ public class GCPlayer : IClicker, IInputReceiver {
             string[] from = Regex.Split(moves[0], "-");
             string[] to = Regex.Split(moves[1], "-");
 
-            Debug.Log(action.ActionString);
+            Debug.Log(action.ActionString + ", Quality: " + action.GetDeepEvaluation() + " (" + action.ActionEvaluation + ") --- " + brain.LearnedStates + "///" + brain.EvaluatedActions);
+
+            if(action.GetDeepEvaluation() != action.ActionEvaluation)
+            {
+                Debug.Log("///////////////////////////////////////////////////////////////");
+            }
 
             foreach (Node n in grid.grid)
             {
@@ -179,7 +208,11 @@ public class GCPlayer : IClicker, IInputReceiver {
                 {
                     if (Rules.IsCheckMove(this, piece, toNode, true))
                     {
-                        Debug.Log("Move checked, game won"); // do nothing
+                        Debug.Log("Move checked, not allowed"); // do nothing
+
+                        brain.EvaluateLastAction(-10000);
+                        GameManager.Instance.GameState.Checkmate();
+                        GameManager.Instance.GameOver(GameManager.Instance.PlayerOponent, GameOverType.CHECKMATE);
                     }
                     else
                     {
@@ -195,6 +228,10 @@ public class GCPlayer : IClicker, IInputReceiver {
                     if (Rules.IsCheckEat(this, piece, toNode, true))
                     {
                         Debug.Log("Eat checked"); // do nothing
+
+                        brain.EvaluateLastAction(-10000);
+                        GameManager.Instance.GameState.Checkmate();
+                        GameManager.Instance.GameOver(GameManager.Instance.PlayerOponent, GameOverType.CHECKMATE);
                     }
                     else
                     {
@@ -213,7 +250,7 @@ public class GCPlayer : IClicker, IInputReceiver {
             }
 
             State newState = GetBoardState();
-
+            
             brain.PerformStateAction(action, newState);
             brain.EvaluateLastAction(reward);
         }
